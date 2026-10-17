@@ -147,7 +147,6 @@ def admin_logout():
     session.clear()
     return redirect(url_for("admin_login"))
 
-
 if __name__ == "__main__":
     app.run(
         host=os.environ.get("FLASK_HOST", "127.0.0.1"),
