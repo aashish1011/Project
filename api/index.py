@@ -19,7 +19,7 @@ from flask import Flask, jsonify, render_template, request, redirect, url_for, s
 from werkzeug.security import check_password_hash
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
