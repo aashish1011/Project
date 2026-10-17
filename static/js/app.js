@@ -318,7 +318,8 @@
         editingTeam: null,
         activeTeam: 1,
         activeSlotId: null,
-        search: ''
+        search: '',
+        prediction: null
       }
     };
 
@@ -751,7 +752,8 @@
           editingTeam: null,
           activeTeam: 1,
           activeSlotId: null,
-          search: ''
+          search: '',
+          prediction: null
         };
       }
       try { localStorage.setItem('fc25_slot_' + state.roomCode + '_1', 'claimed'); } catch (e) {}
@@ -1673,6 +1675,7 @@
       state.lineupBuilder.formations[team] = formation;
       state.lineupBuilder.slots[team] = cloneLineupSlots(formation).map((slot, index) => ({ ...slot, playerId: playerIds[index] || null }));
       state.lineupBuilder.activeSlotId = null;
+      state.lineupBuilder.prediction = null;
       broadcastRoomState();
       renderLineupBuilder();
     }
@@ -1701,7 +1704,8 @@
         editingTeam: null,
         activeTeam: 1,
         activeSlotId: null,
-        search: ''
+        search: '',
+        prediction: null
       };
       const search = document.getElementById('lineup-search');
       if (search) search.value = '';
@@ -1715,6 +1719,7 @@
       if (!slot || !LINEUP_POSITION_OPTIONS.includes(position)) return;
       slot.label = position;
       slot.playerId = null;
+      state.lineupBuilder.prediction = null;
       broadcastRoomState();
       renderLineupBuilder();
     }
@@ -1866,6 +1871,7 @@
       const rect = event.currentTarget.getBoundingClientRect();
       slot.x = Math.max(6, Math.min(94, ((event.clientX - rect.left) / rect.width) * 100));
       slot.y = Math.max(7, Math.min(93, ((event.clientY - rect.top) / rect.height) * 100));
+      state.lineupBuilder.prediction = null;
       broadcastRoomState();
       renderLineupBuilder();
     }
@@ -1953,6 +1959,102 @@
       const banner = document.getElementById('lineup-turn-banner');
       if (banner) banner.textContent = `Player ${builder.activePlayer}'s turn — select a ${builder.activeSlotId ? 'player' : 'pitch position'}`;
       renderLineupPicker();
+      renderLineupBuilderPrediction();
+    }
+
+    function getLineupBuilderTeamMetrics(team) {
+      const slots = getLineupBuilderSlots(team);
+      const selected = slots.map(slot => ({
+        slot,
+        player: LINEUP_PLAYER_POOL.find(player => player.id === slot.playerId)
+      })).filter(item => item.player);
+      if (selected.length < 11) return null;
+
+      const ratingFor = item => getPositionAdjustedRating(item.player, item.slot.label);
+      const average = items => items.length ? items.reduce((sum, item) => sum + ratingFor(item), 0) / items.length : 70;
+      const group = name => selected.filter(item => item.player.group === name);
+      const xiAvg = average(selected);
+      const att = average(group('FWD'));
+      const mid = average(group('MID'));
+      const def = average(group('DEF'));
+      const gk = average(group('GK'));
+      let balanceBonus = 0;
+      if (group('GK').length >= 1) balanceBonus += 1.5;
+      if (group('DEF').length >= 3) balanceBonus += 1.5;
+      if (group('MID').length >= 2) balanceBonus += 1.5;
+      if (group('FWD').length >= 2) balanceBonus += 1.5;
+
+      return {
+        power: Math.round(((xiAvg * 0.55) + (att * 0.15) + (mid * 0.12) + (def * 0.10) + (gk * 0.05) + balanceBonus) * 10) / 10,
+        att: Math.round(att * 10) / 10,
+        mid: Math.round(mid * 10) / 10,
+        def: Math.round(def * 10) / 10,
+        gk: Math.round(gk * 10) / 10,
+        count: selected.length
+      };
+    }
+
+    function refreshLineupBuilderPrediction() {
+      const builder = state.lineupBuilder;
+      const complete = [1, 2].every(team => getLineupBuilderTeamMetrics(team));
+      if (!complete) {
+        const hadPrediction = Boolean(builder.prediction);
+        builder.prediction = null;
+        return hadPrediction;
+      }
+
+      const key = [1, 2].map(team => getLineupBuilderSlots(team)
+        .map(slot => `${slot.id}:${slot.playerId}:${slot.label}`)
+        .join('|')).join('||');
+      if (builder.prediction?.key === key) return false;
+
+      const metricsA = getLineupBuilderTeamMetrics(1);
+      const metricsB = getLineupBuilderTeamMetrics(2);
+      const diff = metricsA.power - metricsB.power;
+      const winProbA = Math.min(88, Math.max(12, Math.round(50 + diff * 3.5)));
+      builder.prediction = {
+        key,
+        winnerTeam: diff >= 0 ? 1 : 2,
+        powerA: metricsA.power,
+        powerB: metricsB.power,
+        winProbA,
+        winProbB: 100 - winProbA
+      };
+      return true;
+    }
+
+    function renderLineupBuilderPrediction() {
+      const container = document.getElementById('lineup-prediction-card');
+      if (!container) return;
+      const changed = refreshLineupBuilderPrediction();
+      const builder = state.lineupBuilder;
+      const metricsA = getLineupBuilderTeamMetrics(1);
+      const metricsB = getLineupBuilderTeamMetrics(2);
+      if (changed && builder.prediction && state.roomActive) broadcastRoomState();
+
+      if (!metricsA || !metricsB || !builder.prediction) {
+        const filledA = getLineupBuilderSlots(1).filter(slot => slot.playerId).length;
+        const filledB = getLineupBuilderSlots(2).filter(slot => slot.playerId).length;
+        container.innerHTML = `<div class="panel p-4 border border-[#2e3646] text-center"><div class="eyebrow">AI match prediction</div><p class="text-sm font-bold text-white">Complete both lineups to reveal the predicted winner.</p><p class="text-xs text-gray-400 mt-1">Player 1: ${filledA}/11 · Player 2: ${filledB}/11</p></div>`;
+        return;
+      }
+
+      const prediction = builder.prediction;
+      const winnerName = builder.teamNames?.[prediction.winnerTeam] || `Player ${prediction.winnerTeam} FC`;
+      const nameA = builder.teamNames?.[1] || 'Player 1 FC';
+      const nameB = builder.teamNames?.[2] || 'Player 2 FC';
+      container.innerHTML = `
+        <div class="panel p-4 sm:p-5 border border-[#d0b986] space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div><div class="eyebrow">AI match prediction</div><h3 class="text-lg font-extrabold text-white">Predicted winner: ${winnerName}</h3></div>
+            <span class="px-3 py-1.5 rounded bg-[#16a34a]/20 border border-[#16a34a]/50 text-[#4ade80] text-xs font-extrabold">${prediction.winnerTeam === 1 ? prediction.winProbA : prediction.winProbB}% win chance</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="bg-[#0b0d10] border border-[#242936] rounded p-3"><div class="text-xs font-bold text-white truncate">${nameA}</div><div class="font-mono-num text-xl font-extrabold text-[#38bdf8]">${prediction.powerA}</div><div class="text-[10px] text-gray-500">Power · ${prediction.winProbA}%</div></div>
+            <div class="bg-[#0b0d10] border border-[#242936] rounded p-3"><div class="text-xs font-bold text-white truncate">${nameB}</div><div class="font-mono-num text-xl font-extrabold text-[#f87171]">${prediction.powerB}</div><div class="text-[10px] text-gray-500">Power · ${prediction.winProbB}%</div></div>
+          </div>
+          <p class="text-[10px] text-gray-500">Prediction uses FIFA-style position-adjusted ratings, lineup balance, and each team’s completed XI.</p>
+        </div>`;
     }
 
     function getFormationSlots(owner) {
