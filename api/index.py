@@ -82,19 +82,13 @@ def add_security_headers(response):
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     return response
 
-
-@app.get("/")
-def home():
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def home(path=""):
     """Render the football auction application."""
-
+    if path == "health":
+        return jsonify({"status": "ok", "service": "build-and-win"})
     return render_template("index.html")
-
-
-@app.get("/health")
-def health():
-    """Lightweight service check for local hosting and deployment probes."""
-
-    return jsonify({"status": "ok", "service": "build-and-win"})
 
 
 @app.route("/admin", methods=["GET", "POST"])
