@@ -1,0 +1,98 @@
+    :root {
+      --ink: #11100e;
+      --surface: #1b1a17;
+      --surface-2: #24221d;
+      --line: #3b382f;
+      --muted: #b8b09f;
+      --blue: #d0b986;
+      --violet: #d0b986;
+      --green: #7db59b;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--ink);
+      color: #f0eadf;
+      margin: 0;
+      padding: 0;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 18px 45px rgba(0,0,0,.18);
+    }
+    .panel-header {
+      background-color: rgba(19,34,56,.85);
+      border-bottom: 1px solid var(--line);
+    }
+    .fc-card {
+      background: #c59b27;
+      color: #1c1504;
+      border: 2px solid #f5e4b3;
+      border-radius: 6px;
+    }
+    .pitch-grid {
+      background-color: #0f3d23;
+      border: 1px solid #235c3b;
+      border-radius: 4px;
+    }
+    .eyebrow { color: #8fa3bd; letter-spacing: .16em; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+    .brand-mark { background: #2b2923; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+    .room-choice { transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+    .room-choice:hover { transform: translateY(-2px); border-color: #d0b986 !important; }
+    .room-choice.active { background: #3a3326 !important; border-color: #d0b986 !important; box-shadow: inset 0 0 0 1px rgba(208,185,134,.35); }
+    input:focus, select:focus { outline: 2px solid rgba(208,185,134,.6); outline-offset: 1px; }
+    button { transition: transform .16s ease, filter .16s ease; }
+    button:hover { filter: brightness(1.08); }
+    .primary-action { background: #b2935e; color: #17140e; box-shadow: 0 10px 24px rgba(0,0,0,.22); }
+    .green-action { background: #25b985; color: #041b17; }
+    .hero-video { min-height: 560px; background: #1b1a17; border: 1px solid #3b382f; border-radius: 18px; overflow: hidden; position: relative; }
+    .hero-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 28%; opacity: .78; filter: saturate(.82) contrast(1.08) brightness(.72); }
+    .hero-copy { position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding: clamp(28px, 6vw, 76px); background: rgba(17,16,14,.72); }
+    .hero-kicker { color: #d0b986; letter-spacing: .2em; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .feature-card { background: #1b1a17; border: 1px solid #3b382f; border-radius: 14px; transition: transform .18s ease, border-color .18s ease; }
+    .feature-card:hover { transform: translateY(-3px); border-color: #b2935e; }
+    .site-header { position: relative !important; top: auto !important; z-index: 10; }
+    .landing-section { margin-top: 24px; }
+    footer { margin-top: 36px; border-top: 1px solid #3b382f; padding-top: 20px; }
+    .landing-player-card { background: #11100e; border: 1px solid #3b382f; border-radius: 10px; overflow: hidden; transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease; }
+    .landing-player-card:hover { transform: translateY(-6px); border-color: #d0b986; box-shadow: 0 18px 30px rgba(0,0,0,.3); }
+    .landing-player-card img { width: 100%; height: 160px; object-fit: contain; object-position: center; padding: 8px; background: #24221d; transition: transform .3s ease, filter .3s ease; }
+    .landing-player-card:hover img { transform: scale(1.05); filter: brightness(1.08) saturate(1.05); }
+    .fifa-grid-card { background: #c59b27; color: #1c1504; border: 2px solid #f1dfaa; border-radius: 12px; overflow: hidden; box-shadow: 0 14px 28px rgba(0,0,0,.2); transition: transform .18s ease, box-shadow .18s ease; }
+    .fifa-grid-card:hover { transform: translateY(-4px); box-shadow: 0 20px 34px rgba(0,0,0,.3); }
+    .database-grid-card { transition: transform .45s ease, opacity .3s ease; }
+    .database-grid-card-enter { animation: database-card-enter .55s ease both; }
+    .database-grid-fading .database-grid-card:first-child { opacity: 0; transform: translateX(-28px); }
+    @keyframes database-card-enter { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+    .fifa-grid-photo { height: 220px; background: #9b7b22; position: relative; overflow: hidden; }
+    .fifa-grid-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .bid-console { background: linear-gradient(145deg, #171b22, #0f1217); border: 1px solid #303949; border-radius: 14px; box-shadow: 0 12px 24px rgba(0,0,0,.18); }
+    .bid-console.leading { box-shadow: 0 0 0 1px rgba(245,158,11,.35), 0 16px 30px rgba(0,0,0,.24); }
+    .bid-primary { background: #d19b2a; color: #1d1607; min-height: 48px; font-size: 14px; font-weight: 900; border-radius: 9px; transition: transform .16s ease, filter .16s ease, box-shadow .16s ease; box-shadow: 0 8px 18px rgba(209,155,42,.18); }
+    .bid-primary:hover { transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 12px 24px rgba(209,155,42,.28); }
+    .bid-step { min-height: 40px; background: #202631; border: 1px solid #3a4658; color: #f3f4f6; border-radius: 8px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; transition: background .16s ease, border-color .16s ease, transform .16s ease; }
+    .bid-step:hover { background: #2b3442; border-color: #d0b986; transform: translateY(-1px); }
+    .bid-custom { min-height: 42px; background: #0b0d10; border: 1px solid #3a4658; border-radius: 8px; }
+    .lineup-slot { position: absolute; transform: translate(-50%, -50%); width: 92px; min-height: 58px; border: 1px dashed rgba(245,228,179,.65); background: rgba(7,35,19,.72); border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center; padding: 5px; transition: .16s ease; }
+    .lineup-slot:hover, .lineup-slot:focus { border-color: #f59e0b; background: rgba(79,54,10,.85); transform: translate(-50%, -50%) scale(1.04); }
+    .lineup-slot.filled { border-style: solid; border-color: #d0b986; background: rgba(11,13,16,.9); }
+    .lineup-slot-photo { width: 34px; height: 34px; object-fit: cover; object-position: top; border-radius: 999px; border: 1px solid #d0b986; background: #24221d; }
+    .lineup-player { cursor: grab; touch-action: none; user-select: none; }
+    .lineup-player:active { cursor: grabbing; }
+    .squad-roster-card { min-height: 74px; }
+    .squad-management-panel { min-height: 0; }
+    .squad-players-panel { min-height: 0; max-height: calc(100vh - 220px); }
+    .squad-players-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.lineup-picker-scroll { max-height: min(62vh, 560px); overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.lineup-builder-slot { min-height: 68px; }
+.lineup-builder-slot[draggable="true"] { cursor: grab; touch-action: none; user-select: none; }
+.lineup-builder-slot[draggable="true"]:active { cursor: grabbing; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0d10; }
+    ::-webkit-scrollbar-thumb { background: #2e3545; border-radius: 2px; }
+

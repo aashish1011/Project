@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin · Build &amp; Win</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+</head>
+<body>
+  <main class="admin-shell">
+    <section class="admin-card" aria-labelledby="admin-title">
+      <p class="eyebrow">Build &amp; Win</p>
+      <h1 id="admin-title">Admin dashboard</h1>
+      <p class="muted">Signed in as <strong>{{ username }}</strong>.</p>
+      <p class="muted">The admin area is protected by a server-side session. Game rooms currently remain client-side/localStorage data.</p>
+      <form method="post" action="{{ url_for('admin_logout') }}">
+        <button type="submit">Sign out</button>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Build & Win — Private Football Rooms</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="site-header bg-[#12151b] border-b border-[#242936]">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="brand-mark px-3 py-2 text-white font-extrabold text-sm tracking-tight rounded-lg">
+          BUILD & WIN
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-sm text-white tracking-tight">PRIVATE FOOTBALL ROOMS</span>
+            <span id="room-code-display" class="font-mono-num text-xs px-2 py-0.5 bg-[#182a45] border border-[#36537b] text-[#8bb4ff] rounded">NO ROOM</span>
+          </div>
+          <div class="text-[11px] text-gray-400">
+            Create a room, invite your friends, and run a live draft together.
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex items-center gap-1 bg-[#0b0d10] p-1 border border-[#242936] rounded">
+        <button onclick="goHome()" class="px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          Home
+        </button>
+        <button onclick="focusCreateRoom()" class="px-3 py-1.5 text-xs font-bold rounded bg-[#b2935e] text-[#17140e]">
+          Create room
+        </button>
+        <button onclick="focusJoinRoom()" class="px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          Join by ID
+        </button>
+        <span class="post-room-nav h-5 w-px bg-[#3b382f] mx-1 hidden"></span>
+        <button id="tab-lobby" onclick="switchView('lobby')" class="post-room-nav hidden px-3 py-1.5 text-xs font-bold rounded bg-[#b2935e] text-[#17140e]">
+          Home
+        </button>
+        <button id="tab-auction" onclick="switchView('auction')" class="post-room-nav hidden px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          2. Live Auction (<span id="nav-lot-counter">1/100</span>)
+        </button>
+        <button id="tab-squads" onclick="switchView('squads')" class="post-room-nav hidden px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          3. Squads (11+5)
+        </button>
+        <button id="tab-tournament" onclick="switchView('tournament')" class="post-room-nav hidden px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          4. Semi-Finals & Final
+        </button>
+        <button id="tab-database" onclick="switchView('database')" class="px-3 py-1.5 text-xs font-bold rounded text-gray-300 hover:text-white">
+          Players
+        </button>
+      </nav>
+
+      <!-- Action Buttons -->
+      <div id="room-actions" class="hidden flex items-center gap-2">
+        <button onclick="reshuffleUnsoldLots()" class="px-2.5 py-1.5 bg-[#171b22] hover:bg-[#1f242d] border border-[#2e3646] text-xs font-semibold text-[#f59e0b] rounded">
+          Shuffle Order
+        </button>
+        <button id="btn-sfx" onclick="toggleSound()" class="px-2.5 py-1.5 bg-[#171b22] hover:bg-[#1f242d] border border-[#2e3646] text-xs font-semibold text-gray-200 rounded">
+          Audio: ON
+        </button>
+        <button id="btn-reset-room" onclick="openResetModal()" class="px-2.5 py-1.5 bg-[#2a1215] hover:bg-[#3b181c] border border-[#5c232a] text-xs font-semibold text-red-200 rounded-lg">
+          Reset Room
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-6 sm:py-8 flex-1 space-y-6">
+
+    <section id="landing-hero" class="hero-video">
+      <img class="hero-image" src="https://resources.koha.net/images/2018/August/28/ronaldo-bicycle-kick-goal-real-madrid1535459284.jpg?h=900&amp;q=92&amp;r=fill&amp;w=1800" alt="Cristiano Ronaldo bicycle kick in a Champions League match" />
+      <div class="hero-copy">
+        <div class="hero-kicker">Build your club. Own the moment.</div>
+        <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-2xl mt-3">Build your team. Win the room.</h1>
+        <p class="text-sm sm:text-base text-[#d6d0c5] max-w-xl mt-4">Create a private room, invite your players, and compete for the best squad in the room.</p>
+        <div class="flex flex-wrap gap-2 mt-7">
+          <button onclick="focusCreateRoom()" class="px-5 py-3 primary-action text-xs font-extrabold rounded-lg">Create a room</button>
+          <button onclick="focusJoinRoom()" class="px-5 py-3 bg-[#24221d] border border-[#6e6657] text-[#f0eadf] text-xs font-extrabold rounded-lg">Join with room ID</button>
+        </div>
+        <div class="flex flex-wrap gap-6 mt-9 pt-5 border-t border-[#6e6657] max-w-xl">
+          <div><div class="font-mono-num text-xl font-extrabold text-[#d0b986]">99</div><div class="text-[10px] uppercase tracking-wider text-[#b8b09f]">elite players</div></div>
+          <div><div class="font-mono-num text-xl font-extrabold text-[#d0b986]">€300M</div><div class="text-[10px] uppercase tracking-wider text-[#b8b09f]">starting budget</div></div>
+          <div><div class="font-mono-num text-xl font-extrabold text-[#d0b986]">10s</div><div class="text-[10px] uppercase tracking-wider text-[#b8b09f]">bid timer</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="landing-content" class="landing-section space-y-6">
+      <div class="flex items-end justify-between gap-3">
+        <div>
+          <div class="eyebrow">How Build &amp; Win works</div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">Three clear steps. One champion.</h2>
+        </div>
+        <div class="hidden sm:block text-xs text-[#aaa294]">Private rooms · 2 or 4 players</div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="feature-card p-5"><div class="font-mono-num text-2xl text-[#d0b986]">01</div><h3 class="text-base font-bold text-white mt-4">Create or join</h3><p class="text-xs text-[#aaa294] mt-2 leading-relaxed">Choose 2 or 4 players. Create a room and share its ID, or paste a friend’s ID to join.</p></div>
+        <div class="feature-card p-5"><div class="font-mono-num text-2xl text-[#d0b986]">02</div><h3 class="text-base font-bold text-white mt-4">Bid for players</h3><p class="text-xs text-[#aaa294] mt-2 leading-relaxed">Take turns bidding with your budget. The highest bid signs that player to your club.</p></div>
+        <div class="feature-card p-5"><div class="font-mono-num text-2xl text-[#d0b986]">03</div><h3 class="text-base font-bold text-white mt-4">Set your XI</h3><p class="text-xs text-[#aaa294] mt-2 leading-relaxed">Choose your starters, enter the knockout bracket, and play for the Build &amp; Win title.</p></div>
+      </div>
+
+      <div class="panel p-4 sm:p-5 space-y-3">
+        <div class="flex items-end justify-between gap-3 border-b border-[#3b382f] pb-3">
+          <div><div class="eyebrow">Featured player pool</div><h2 class="text-xl sm:text-2xl font-extrabold text-white mt-1">Scout the next match-winner</h2></div>
+          <button onclick="switchView('database')" class="px-3 py-2 bg-[#24221d] border border-[#6e6657] text-[#f0eadf] text-xs font-extrabold rounded-lg">View all players</button>
+        </div>
+        <div id="landing-featured-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4"></div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 1: MULTIPLAYER ROOM LOBBY             -->
+    <!-- ========================================== -->
+    <section id="view-lobby" class="space-y-4">
+      <div id="room-share-lobby" class="hidden panel p-4 border-l-4 border-[#b2935e]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="eyebrow">Room created</div>
+            <div class="text-sm text-white font-bold mt-1">Share this room ID with your players</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="lobby-room-id" class="font-mono-num text-lg font-extrabold tracking-wider text-[#d0b986] px-3 py-2 bg-[#11100e] border border-[#6e6657] rounded-lg">FC-4092</span>
+            <button onclick="copyCreatedRoomId()" class="px-3 py-2 primary-action text-xs font-bold rounded-lg">Copy ID</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <!-- Create or Join Room Panel -->
+        <div id="room-entry-panel" class="lg:col-span-5 panel p-5 space-y-4">
+          <div class="border-b border-[#242936] pb-3">
+            <div class="eyebrow mb-1">Private match lobby</div>
+            <h2 class="text-xl font-bold text-white">Create or join a room</h2>
+            <p class="text-xs text-gray-400 mt-1">Choose a compact room for a head-to-head final, or fill a four-player knockout bracket.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-300 mb-1">Game mode</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-mode-auction" onclick="setRoomMode('auction')" class="room-choice active py-3 px-3 text-left text-xs font-bold border rounded-lg">
+                  <span class="block text-white">Player Auction PVP</span><span class="block mt-1 text-[10px] text-gray-400">Bid for players together</span>
+                </button>
+                <button id="btn-mode-lineup" onclick="setRoomMode('lineup')" class="room-choice py-3 px-3 text-left text-xs font-bold border rounded-lg bg-[#171b22] text-gray-300 border-[#2e3646]">
+                  <span class="block text-white">Lineup Builder PVP</span><span class="block mt-1 text-[10px] text-gray-400">Take turns choosing an XI</span>
+                </button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-300 mb-1">Room size</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-mode-2" onclick="setRoomSize(2)" class="room-choice py-3 px-3 text-left text-xs font-bold border rounded-lg bg-[#171b22] text-gray-300 border-[#2e3646]">
+                  <span class="block text-white">2 players</span><span class="block mt-1 text-[10px] text-gray-400">Direct championship match</span>
+                </button>
+                <button id="btn-mode-4" onclick="setRoomSize(4)" class="room-choice py-3 px-3 text-left text-xs font-bold border rounded-lg bg-[#171b22] text-gray-300 border-[#2e3646]">
+                  <span class="block text-white">4 players</span><span class="block mt-1 text-[10px] text-gray-400">Two semi-finals + final</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Room code</label>
+                <div class="flex gap-1.5">
+                  <input id="input-room-code" type="text" value="READY" readonly class="w-full px-2.5 py-1.5 bg-[#0b0d10] border border-[#2e3646] rounded text-xs font-mono-num text-white uppercase" />
+                  <button onclick="copyRoomCode()" class="px-2.5 py-1.5 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-xs font-semibold text-gray-200 rounded">
+                    Copy
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-300 mb-1">Starting Budget Per Owner</label>
+                <div class="px-2.5 py-1.5 bg-[#0b0d10] border border-[#242936] rounded text-xs font-mono-num font-bold text-[#10b981]">
+                  EUR 300.0M (Fixed Rule)
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 flex flex-wrap gap-2">
+              <button onclick="createRoom()" class="flex-1 py-2.5 px-4 primary-action text-white font-bold text-xs rounded-lg">
+                Create room
+              </button>
+              <button onclick="showJoinRoom()" class="py-2.5 px-3 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-gray-200 font-bold text-xs rounded-lg">
+                Join by ID
+              </button>
+            </div>
+
+            <div id="join-room-panel" class="hidden p-3 bg-[#0b0d10] border border-[#36537b] rounded-lg space-y-2">
+              <div class="text-xs font-bold text-white">Join an existing room</div>
+              <div class="text-[11px] text-gray-400">Paste the room ID your friend shared with you.</div>
+              <div class="flex gap-2">
+                <input id="join-room-code" type="text" placeholder="e.g. FC-4092" class="w-full px-2.5 py-2 bg-[#101d30] border border-[#2e3646] rounded text-xs font-mono-num text-white uppercase" />
+                <button onclick="joinRoomById()" class="px-4 py-2 primary-action text-white font-bold text-xs rounded-lg">Join</button>
+              </div>
+              <button onclick="hideJoinRoom()" class="text-[11px] text-gray-400 hover:text-white">Cancel</button>
+            </div>
+          </div>
+
+          <div class="p-3 bg-[#0b0d10] border border-[#242936] rounded space-y-1.5 text-xs text-gray-400">
+            <div class="font-bold text-gray-200">Room setup</div>
+            <div id="lobby-bracket-desc">
+              4-player knockout: two semi-finals feed into a grand final. Share the room code with your friends so they can join.
+            </div>
+          </div>
+        </div>
+
+        <!-- Registered Room Owners Table -->
+        <div id="room-players-panel" class="hidden lg:col-span-7 panel p-4 flex flex-col justify-between space-y-4">
+          <div>
+            <div class="flex items-center justify-between border-b border-[#242936] pb-3">
+              <div>
+                <h2 id="room-mode-title" class="text-base font-bold text-white">Players in this room</h2>
+                <p class="text-xs text-gray-400 mt-0.5">Rename your club before the auction starts. Everyone gets EUR 300.0M and must buy 16 players.</p>
+              </div>
+              <span id="lobby-owner-count-label" class="font-mono-num text-xs font-bold text-[#f59e0b] px-2.5 py-1 bg-[#171b22] border border-[#2e3646] rounded">
+                4 Active Owners
+              </span>
+            </div>
+
+            <div id="lobby-owners-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-[#242936]">
+            <div class="flex gap-2">
+              <button id="btn-start-auction" onclick="startAuction()" class="px-4 py-2 primary-action text-white font-extrabold text-xs rounded-lg">
+                Start Auction Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 2: LIVE AUCTION ARENA                 -->
+    <!-- ========================================== -->
+    <section id="view-auction" class="hidden space-y-4">
+
+      <div id="room-created-strip" class="hidden panel p-4 border-l-4 border-[#4f8cff]">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="eyebrow">Room ready</div>
+            <div class="text-sm text-white font-bold mt-1">Share this room ID with your players</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="created-room-id" class="font-mono-num text-lg font-extrabold tracking-wider text-[#8bb4ff] px-3 py-2 bg-[#101d30] border border-[#36537b] rounded-lg">FC-4092</span>
+            <button onclick="copyCreatedRoomId()" class="px-3 py-2 primary-action text-white text-xs font-bold rounded-lg">Copy ID</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOP 10-SECOND COUNTDOWN BAR (10 9 8 7 6 5 4 3 2 1) -->
+      <div class="panel p-4">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-4">
+          <!-- Left: Bid Status -->
+          <div class="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-start">
+            <div id="auction-state-tag" class="px-3 py-1.5 bg-[#171b22] border border-[#2e3646] text-xs font-bold uppercase tracking-wider text-gray-300 rounded">
+              WAITING FOR BID
+            </div>
+            <div>
+              <div class="text-[11px] uppercase text-gray-400 font-semibold">Current Highest Bid</div>
+              <div class="flex items-baseline gap-2">
+                <span id="live-bid-amount" class="font-mono-num text-2xl sm:text-3xl font-extrabold text-[#f59e0b]">EUR 0.0M</span>
+                <span id="live-bid-owner" class="text-xs sm:text-sm font-bold text-gray-300">No active bidder</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: Explicit 10-Second Countdown Display -->
+          <div class="flex flex-col items-center">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1">
+              10-Second Auction Countdown
+            </div>
+            <div class="flex items-center gap-2">
+              <div id="timer-main-box" class="w-20 h-14 bg-[#0b0d10] border-2 border-[#d97706] rounded flex flex-col items-center justify-center">
+                <span id="timer-digits" class="font-mono-num text-3xl font-extrabold text-[#f59e0b] leading-none">10</span>
+                <span class="text-[9px] uppercase text-gray-400 mt-0.5">SEC</span>
+              </div>
+              <div id="timer-sequence-bars" class="flex items-center gap-1">
+                <!-- 10 9 8 7 6 5 4 3 2 1 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Auctioneer Controls -->
+          <div class="flex flex-wrap items-center justify-end gap-2 w-full lg:w-auto">
+            <button id="btn-pause-clock" onclick="togglePauseTimer()" class="px-3 py-2 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-xs font-bold text-gray-200 rounded disabled:opacity-40" disabled>
+              Pause Timer
+            </button>
+            <button id="btn-pass-player" onclick="requestPass()" class="px-3 py-2 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-xs font-bold text-gray-300 rounded disabled:opacity-40 disabled:cursor-not-allowed">
+              Pass / Unsold
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN AUCTION GRID: CURRENT PLAYER CARD (LEFT) + MULTIPLAYER OWNER BID CONSOLES (RIGHT) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+        <!-- Left 4 Columns: Active EA FC 25 Player Card (With Real Player Photo) -->
+        <div class="lg:col-span-4 panel p-4 flex flex-col items-center justify-between space-y-3">
+          <div class="w-full flex items-center justify-between text-xs border-b border-[#242936] pb-2">
+            <span id="lot-index-label" class="font-mono-num font-bold text-[#f59e0b]">LOT #1 / 100 (RANDOM ORDER)</span>
+            <span id="lot-base-label" class="font-mono-num font-bold text-gray-200">Base: EUR 20.0M</span>
+          </div>
+
+          <!-- Official EA FC Card Layout with Real Player Photo -->
+          <div class="fc-card w-64 sm:w-72 p-4 shadow-lg">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-col items-start">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider opacity-75">EA SPORTS FC</span>
+                <span id="card-ovr" class="font-mono-num text-4xl sm:text-5xl font-extrabold leading-none mt-0.5">91</span>
+                <span id="card-pos" class="font-mono-num text-sm font-extrabold uppercase px-1.5 py-0.5 bg-black/15 rounded mt-1">ST</span>
+                <div class="mt-2 flex flex-col gap-1">
+                  <span id="card-nation" class="font-mono-num text-xs font-extrabold px-1.5 py-0.5 bg-black/15 rounded">FRA</span>
+                  <span id="card-club" class="text-[11px] font-bold px-1.5 py-0.5 bg-black/10 rounded max-w-[85px] truncate">Real Madrid</span>
+                </div>
+              </div>
+
+              <!-- Real Player Photograph Container -->
+              <div id="card-portrait-box" class="w-36 h-40 sm:w-40 sm:h-44 flex items-center justify-center bg-black/15 rounded border border-black/20 overflow-hidden relative">
+                <img id="card-real-img" src="" alt="Player Photo" referrerpolicy="no-referrer" class="w-full h-full object-cover object-top" />
+              </div>
+            </div>
+
+            <div class="mt-2.5 pt-1.5 pb-1 border-t border-b border-black/25 text-center bg-white/25 rounded">
+              <div id="card-name" class="text-lg font-extrabold uppercase tracking-tight truncate px-2">Kylian Mbappe</div>
+              <div id="card-tier-note" class="text-[11px] font-semibold opacity-80">Official FIFA / EA FC Rating</div>
+            </div>
+
+            <div id="card-attributes" class="grid grid-cols-2 gap-x-4 gap-y-1 mt-2.5 px-2 text-xs font-mono-num font-bold">
+              <!-- PAC, SHO, PAS, DRI, DEF, PHY -->
+            </div>
+          </div>
+
+          <!-- Transfer News & Scouting Ticker -->
+          <div id="player-news-box" class="w-full p-2.5 bg-[#171b22] border border-[#2e3646] rounded text-xs text-gray-200 space-y-1">
+            <div class="text-[10px] font-extrabold uppercase tracking-wider text-[#f59e0b]">Transfer Desk Scouting Report</div>
+            <div id="player-news-text" class="text-xs text-gray-300 leading-snug">
+              Random draw active: top-tier and mid-tier rated stars appear in mixed sequence.
+            </div>
+          </div>
+
+          <div id="auction-status-line" class="w-full p-2.5 bg-[#0b0d10] border border-[#242936] rounded text-xs text-center text-gray-300 font-medium">
+            Select any owner bid button on the right to start the 10-second countdown.
+          </div>
+
+          <div class="w-full flex items-center justify-between pt-2 border-t border-[#242936] text-xs">
+            <button id="btn-prev-player" onclick="stepLot(-1)" class="px-3 py-1.5 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-gray-200 font-semibold rounded disabled:opacity-40 disabled:cursor-not-allowed">
+              Prev Player
+            </button>
+            <span class="font-mono-num text-gray-400">
+              Sold: <strong id="count-sold" class="text-[#10b981]">0</strong> | Avail: <strong id="count-avail" class="text-[#f59e0b]">100</strong>
+            </span>
+            <button id="btn-next-player" onclick="stepLot(1)" class="px-3 py-1.5 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] text-gray-200 font-semibold rounded disabled:opacity-40 disabled:cursor-not-allowed">
+              Next Player
+            </button>
+          </div>
+        </div>
+
+        <!-- Right 8 Columns: Multiplayer Owner Bidding Consoles (4 or 6 Owners) -->
+        <div class="lg:col-span-8 space-y-3">
+          <div class="panel p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-bold text-gray-200">Live bids</span>
+            <span class="text-gray-400">New bids reset the 10s timer</span>
+          </div>
+
+          <div id="owners-bid-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Populated dynamically for all 4 or 6 owners -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 3: SQUADS & PLAYING XI (11 + 5)       -->
+    <!-- ========================================== -->
+    <section id="view-squads" class="hidden space-y-4">
+      <div class="panel p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white">Build Your 11</h2>
+          <p class="text-xs text-gray-400">Your auction is complete. Drag a player onto the pitch, or select a player and click a slot. Ratings are adjusted for the position, like EA FC.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button onclick="switchView('tournament')" class="px-4 py-2 bg-[#d97706] hover:bg-[#b45309] text-black text-xs font-extrabold rounded">
+            Go to Semi-Finals & Final Predictor
+          </button>
+        </div>
+      </div>
+
+      <!-- Owner Selector Tabs for Squad View -->
+      <div id="squad-owner-tabs" class="flex flex-wrap gap-2"></div>
+
+      <!-- Selected Owner Pitch & Roster List -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div class="lg:col-span-7 panel p-4 space-y-3 squad-management-panel">
+          <div class="flex items-center justify-between border-b border-[#242936] pb-2">
+            <div>
+              <h3 id="active-squad-title" class="text-sm font-bold text-white">Owner 1 Playing XI</h3>
+              <p id="active-squad-meta" class="text-xs text-gray-400 font-mono-num">Budget Left: EUR 300.0M | Avg XI Rating: 0.0</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="squad-owner-select" class="sr-only">Switch team</label>
+              <select id="squad-owner-select" onchange="changeSquadOwner(this.value)" class="max-w-[150px] px-2 py-1.5 bg-[#0b0d10] border border-[#2e3646] rounded text-[11px] font-bold text-white"></select>
+              <span id="active-squad-counts" class="font-mono-num text-xs font-bold px-2.5 py-1 bg-[#171b22] border border-[#2e3646] text-[#10b981] rounded">
+                XI: 0/11 | Extras: 0/5
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between gap-2">
+            <label for="formation-select" class="text-xs font-bold uppercase tracking-wider text-gray-300">Formation</label>
+            <select id="formation-select" onchange="changeFormation(this.value)" class="px-3 py-2 bg-[#0b0d10] border border-[#2e3646] rounded text-xs text-white">
+              <option value="4-3-3">4-3-3 Attack</option>
+              <option value="4-4-2">4-4-2 Classic</option>
+              <option value="3-5-2">3-5-2 Midfield</option>
+              <option value="4-2-3-1">4-2-3-1 Control</option>
+            </select>
+          </div>
+
+          <div id="active-squad-pitch" class="pitch-grid relative min-h-[540px] overflow-hidden p-3">
+            <!-- Formation slots populated dynamically -->
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 panel p-4 space-y-3 flex flex-col squad-players-panel">
+          <div class="flex items-center justify-between border-b border-[#242936] pb-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-300">Signed players · drag to pitch</span>
+          </div>
+          <div id="active-squad-table" class="squad-players-scroll flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 4: KNOCKOUT TOURNAMENT PREDICTOR      -->
+    <!-- ========================================== -->
+    <section id="view-tournament" class="hidden space-y-4">
+      <div class="panel p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white">Multiplayer Knockout Bracket: Semi-Finals & Final Prediction</h2>
+          <p class="text-xs text-gray-400">Evaluates each team's Playing XI (Attack, Midfield, Defense, GK, Chemistry) and 5 Extras to predict win probabilities and simulate every knockout match.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="simulateEntireTournament()" class="px-4 py-2 bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-xs rounded">
+            Simulate Full Knockout Tournament
+          </button>
+        </div>
+      </div>
+
+      <!-- Team Power Standings Overview -->
+      <div id="tournament-power-cards" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+
+      <!-- Knockout Stages Container -->
+      <div id="tournament-brackets-container" class="space-y-4">
+        <!-- Populated dynamically with Semi-Finals (or Round 1 + SF) and Grand Final -->
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 5: 80-PLAYER OFFICIAL DATABASE        -->
+    <!-- ========================================== -->
+    <section id="view-database" class="hidden space-y-4">
+      <div class="panel p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-extrabold text-white">Featured Player Cards</h2>
+          <p class="text-xs text-gray-400">Five player cards rotate through the pool. Every 5–8 seconds, the first card fades and a new card enters at the end.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="db-search" type="text" oninput="renderDatabaseView()" placeholder="Search name, club, pos..." class="px-3 py-1.5 bg-[#0b0d10] border border-[#2e3646] rounded text-xs text-white" />
+          <select id="db-pos" onchange="renderDatabaseView()" class="px-3 py-1.5 bg-[#0b0d10] border border-[#2e3646] rounded text-xs text-white">
+            <option value="ALL">All Positions (99)</option>
+            <option value="FWD">Forwards (ST/LW/RW)</option>
+            <option value="MID">Midfielders (CAM/CM/CDM)</option>
+            <option value="DEF">Defenders (CB/LB/RB)</option>
+            <option value="GK">Goalkeepers (GK)</option>
+          </select>
+          <select id="db-status" onchange="renderDatabaseView()" class="px-3 py-1.5 bg-[#0b0d10] border border-[#2e3646] rounded text-xs text-white">
+            <option value="ALL">All Statuses</option>
+            <option value="AVAILABLE">Available</option>
+            <option value="SOLD">Sold</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="db-detail-panel" class="hidden panel p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-3 border-b border-[#242936] pb-3">
+          <div>
+            <div class="eyebrow">Player profile</div>
+            <h3 class="text-base font-bold text-white mt-1">Card details and attributes</h3>
+          </div>
+          <button onclick="closePlayerDetails()" class="px-3 py-1.5 bg-[#171b22] hover:bg-[#222834] border border-[#2e3646] rounded text-xs font-bold text-gray-300">Close</button>
+        </div>
+        <div id="db-detail-content" class="mt-4"></div>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 text-[10px] text-gray-500"><span id="db-rotation-label">Showing all players</span><span>Search and filter the complete player pool</span></div>
+      <div id="db-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5"></div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- VIEW 6: TWO-PERSON LINEUP BUILDER          -->
+    <!-- ========================================== -->
+    <section id="view-lineup" class="hidden space-y-4">
+      <div class="panel p-4 sm:p-5 space-y-2">
+        <div class="eyebrow">Head-to-head lineup draft</div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white">Lineup Builder</h2>
+        <p class="text-xs text-gray-400">Two people take turns choosing players. Once a player is selected, the other person gets the next pick and that player cannot be selected again.</p>
+        <div class="flex flex-wrap items-center gap-2">
+          <div id="lineup-turn-banner" class="inline-flex px-3 py-2 bg-[#3a3326] border border-[#d0b986] rounded-lg text-xs font-extrabold text-[#f0eadf]">Player 1's turn</div>
+          <button onclick="resetLineupBuilder()" class="px-3 py-2 bg-[#2a1215] border border-[#5c232a] rounded-lg text-[10px] font-extrabold text-red-200">Reset builder</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div id="lineup-team-1" class="panel p-4 space-y-3"></div>
+          <div id="lineup-team-2" class="panel p-4 space-y-3"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="max-w-7xl w-full mx-auto px-4 pb-8 flex flex-wrap items-center justify-between gap-4 text-[11px] text-[#9f9789]">
+    <div><div class="font-bold text-[#d0b986] tracking-wide">BUILD &amp; WIN</div><div class="mt-1">Private football rooms for competitive friends.</div></div>
+    <div class="flex flex-wrap gap-4"><span>99 players</span><span>2 or 4 players</span><span>10-second bids</span></div>
+  </footer>
+
+  <!-- NOTIFICATION BAR -->
+  <div id="toast-box" class="fixed bottom-4 right-4 z-50 space-y-1.5 pointer-events-none"></div>
+
+  <!-- LINEUP PLAYER PICKER -->
+  <aside id="lineup-picker-panel" class="hidden fixed inset-0 z-[55] bg-black/80 flex items-center justify-center p-4">
+    <div class="panel w-full max-w-lg p-4 space-y-3 border border-[#d0b986]">
+      <div class="flex items-center justify-between gap-3">
+        <div><div class="eyebrow">Player picker</div><h3 id="lineup-picker-title" class="text-base font-bold text-white mt-1">Choose a pitch slot</h3></div>
+        <button onclick="closeLineupPicker()" class="px-3 py-1.5 bg-[#171b22] border border-[#2e3646] rounded text-xs font-bold text-gray-300">Close</button>
+      </div>
+      <input id="lineup-search" type="search" oninput="setLineupSearch(this.value)" placeholder="Search player or club..." class="w-full px-3 py-2 bg-[#0b0d10] border border-[#2e3646] rounded text-xs text-white" />
+      <div id="lineup-picker-count" class="text-[10px] text-gray-500"></div>
+      <div id="lineup-picker-list" class="lineup-picker-scroll space-y-2"></div>
+    </div>
+  </aside>
+
+  <!-- ROOM START BLOCKED MODAL -->
+  <div id="room-start-blocked-modal" class="hidden fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4">
+    <div class="panel max-w-md w-full p-6 space-y-4 border-2 border-[#f59e0b] text-center">
+      <div class="eyebrow text-[#f59e0b]">Waiting for opponent</div>
+      <h3 class="text-xl font-extrabold text-white">No second player in the room</h3>
+      <p class="text-sm text-gray-300">Share the room code and wait for another player to join before starting the game.</p>
+      <button onclick="closeRoomStartBlocked()" class="w-full px-4 py-2.5 bg-[#b2935e] hover:bg-[#d0b986] text-[#17140e] text-xs font-extrabold rounded-lg">Okay</button>
+    </div>
+  </div>
+
+  <!-- PLAYER LEFT GAME MODAL -->
+  <div id="leave-game-modal" class="hidden fixed inset-0 z-[60] bg-black/85 flex items-center justify-center p-4">
+    <div class="panel max-w-md w-full p-6 space-y-4 border-2 border-[#dc2626] text-center">
+      <div class="eyebrow text-[#f87171]">Game ended</div>
+      <h3 class="text-xl font-extrabold text-white">A team left the game</h3>
+      <p id="leave-game-copy" class="text-sm text-gray-300">The other team left the room.</p>
+      <button onclick="exitRoomAfterPlayerLeft()" class="w-full px-4 py-2.5 bg-[#dc2626] hover:bg-[#b91c1c] text-white text-xs font-extrabold rounded-lg">Return to Home</button>
+    </div>
+  </div>
+
+  <!-- RESET CONFIRMATION MODAL -->
+  <div id="reset-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <div class="panel max-w-md w-full p-5 space-y-4">
+      <h3 class="text-base font-bold text-white">Reset Room, Reshuffle Player Pool & Restore Budgets?</h3>
+      <p class="text-xs text-gray-300">This will restore every owner in the room to EUR 300.0M and randomly shuffle all 99 players for a fresh auction.</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeResetModal()" class="px-3.5 py-1.5 bg-[#171b22] border border-[#2e3646] text-xs font-bold text-gray-300 rounded">Cancel</button>
+        <button onclick="confirmResetRoom()" class="px-3.5 py-1.5 bg-[#dc2626] text-xs font-bold text-white rounded">Confirm Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASS CONFIRMATION MODAL -->
+  <div id="pass-request-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+    <div class="panel max-w-md w-full p-5 space-y-4 border border-[#d97706]">
+      <div class="eyebrow">Pass request</div>
+      <h3 id="pass-request-title" class="text-lg font-bold text-white">Pass this player?</h3>
+      <p id="pass-request-copy" class="text-sm text-gray-300">The other owner wants to pass this player.</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="respondToPass(false)" class="px-3.5 py-2 bg-[#171b22] border border-[#2e3646] text-xs font-bold text-gray-300 rounded">No, keep bidding open</button>
+        <button onclick="respondToPass(true)" class="px-3.5 py-2 bg-[#d97706] text-black text-xs font-extrabold rounded">Yes, pass player</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
