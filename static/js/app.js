@@ -280,6 +280,7 @@
       lobbyOpen: false,
       localOwnerId: null,
       hostOwnerId: null,
+      serverMemberCount: 0,
       roomCode: '',
       roomMode: 'auction',
       roomSize: 4,
@@ -331,6 +332,8 @@
     let databaseNewCardId = null;
     let audioCtx = null;
     let roomChannel = null;
+    let roomServerSyncTimer = null;
+    let roomServerCreated = false;
 
     function rememberRoomSession() {
       if (!state.roomActive || !state.roomCode) return;
@@ -378,6 +381,53 @@
       }
     }
 
+    function applyRoomSnapshot(parsed, ownerId = null, memberCount = null) {
+      if (!parsed || !Array.isArray(parsed.players) || !parsed.owners) return false;
+      state.roomActive = true;
+      state.roomCode = parsed.roomCode || state.roomCode;
+      state.roomMode = parsed.roomMode || 'auction';
+      state.roomSize = parsed.roomSize;
+      state.hostOwnerId = parsed.hostOwnerId || 1;
+      state.players = parsed.players.filter(p => !REMOVED_PLAYER_IDS.has(p.id));
+      state.currentIndex = parsed.currentIndex;
+      state.currentBid = parsed.currentBid;
+      state.currentBidder = parsed.currentBidder;
+      state.passRequest = parsed.passRequest || null;
+      state.timerSeconds = parsed.timerSeconds ?? 10;
+      state.timerRunning = Boolean(parsed.timerRunning);
+      state.timerPaused = Boolean(parsed.timerPaused);
+      state.timerStartedAt = parsed.timerStartedAt || 0;
+      state.timerPausedAt = parsed.timerPausedAt || 0;
+      state.timerPausedMs = parsed.timerPausedMs || 0;
+      state.auctionStarted = Boolean(parsed.auctionStarted);
+      state.auctionComplete = Boolean(parsed.auctionComplete);
+      state.owners = parsed.owners;
+      state.bracket = parsed.bracket || { qf: [], sf: [], finalMatch: null, champion: null };
+      if (parsed.lineupBuilder) state.lineupBuilder = parsed.lineupBuilder;
+      if (ownerId) state.localOwnerId = Number(ownerId);
+      if (memberCount !== null) state.serverMemberCount = Number(memberCount) || 0;
+      roomServerCreated = true;
+      preloadUpcomingPhotos(state.currentIndex, 10);
+      renderAll();
+      if (state.roomMode === 'lineup' && state.auctionStarted) switchView('lineup');
+      else if (state.auctionComplete) switchView('squads');
+      else if (state.auctionStarted) switchView('auction');
+      return true;
+    }
+
+    function startRoomServerPolling() {
+      clearInterval(roomServerSyncTimer);
+      roomServerSyncTimer = setInterval(async () => {
+        if (!state.roomActive || !state.roomCode) return;
+        try {
+          const response = await fetch('/api/rooms/' + encodeURIComponent(state.roomCode), { cache: 'no-store' });
+          if (!response.ok) return;
+          const data = await response.json();
+          if (data.snapshot) applyRoomSnapshot(data.snapshot, null, data.memberCount);
+        } catch (e) {}
+      }, 1500);
+    }
+
     function setupBroadcastChannel() {
       try {
         if ('BroadcastChannel' in window) {
@@ -388,37 +438,7 @@
             if (ev.data && ev.data.type === 'SYNC_STATE') {
               const incoming = ev.data.payload;
               if (!incoming || !Array.isArray(incoming.players) || !incoming.owners) return;
-              state.roomActive = true;
-              state.roomCode = incoming.roomCode || state.roomCode;
-              state.roomMode = incoming.roomMode || 'auction';
-              state.roomSize = incoming.roomSize;
-              state.hostOwnerId = incoming.hostOwnerId || 1;
-              state.players = incoming.players.filter(p => !REMOVED_PLAYER_IDS.has(p.id));
-              state.currentIndex = incoming.currentIndex;
-              state.currentBid = incoming.currentBid;
-              state.currentBidder = incoming.currentBidder;
-              state.passRequest = incoming.passRequest || null;
-              state.timerSeconds = incoming.timerSeconds;
-              state.timerRunning = Boolean(incoming.timerRunning);
-              state.timerPaused = Boolean(incoming.timerPaused);
-              state.timerStartedAt = incoming.timerStartedAt || 0;
-              state.timerPausedAt = incoming.timerPausedAt || 0;
-              state.timerPausedMs = incoming.timerPausedMs || 0;
-              state.auctionStarted = Boolean(incoming.auctionStarted);
-              state.auctionComplete = Boolean(incoming.auctionComplete);
-              state.owners = incoming.owners;
-              state.bracket = incoming.bracket;
-              if (incoming.lineupBuilder) state.lineupBuilder = incoming.lineupBuilder;
-              preloadUpcomingPhotos(state.currentIndex, 10);
-              if (state.roomMode === 'lineup' && state.auctionStarted) {
-                switchView('lineup');
-              } else if (state.auctionComplete) {
-                switchView('squads');
-              } else if (state.auctionStarted) {
-                switchView('auction');
-              } else {
-                renderAll();
-              }
+              applyRoomSnapshot(incoming);
             }
           };
         }
@@ -452,6 +472,22 @@
         };
         rememberRoomSession();
         localStorage.setItem('fc25_room_' + state.roomCode, JSON.stringify(snapshot));
+        const method = roomServerCreated ? 'PUT' : 'POST';
+        const endpoint = method === 'POST'
+          ? '/api/rooms'
+          : '/api/rooms/' + encodeURIComponent(state.roomCode);
+        fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(snapshot),
+          keepalive: true
+        }).then(async response => {
+          if (response.ok) {
+            roomServerCreated = true;
+            const data = await response.json();
+            if (data.memberCount) state.serverMemberCount = Number(data.memberCount);
+          }
+        }).catch(() => {});
         if (roomChannel) {
           roomChannel.postMessage({ type: 'SYNC_STATE', payload: snapshot });
         }
@@ -687,6 +723,8 @@
 
     function goHome(skipLeaveAnnouncement = false) {
       if (!skipLeaveAnnouncement) announcePlayerLeft();
+      clearInterval(roomServerSyncTimer);
+      roomServerSyncTimer = null;
       state.explicitRoomExit = true;
       if (roomChannel) {
         roomChannel.close();
@@ -733,6 +771,8 @@
     function createRoom() {
       const codeInput = createUniqueRoomId();
       state.roomCode = codeInput;
+      roomServerCreated = false;
+      state.serverMemberCount = 1;
       state.roomActive = true;
       state.hostOwnerId = 1;
       state.localOwnerId = 1;
@@ -762,6 +802,7 @@
       setupBroadcastChannel();
       rememberRoomSession();
       broadcastRoomState();
+      startRoomServerPolling();
       document.getElementById('created-room-id').textContent = state.roomCode;
       document.getElementById('room-created-strip').classList.remove('hidden');
       document.getElementById('lobby-room-id').textContent = state.roomCode;
@@ -779,6 +820,7 @@
 
     function getClaimedRoomMemberCount() {
       if (!state.roomActive || !state.roomCode) return 0;
+      if (state.serverMemberCount > 0) return state.serverMemberCount;
       let count = 0;
       try {
         for (let ownerId = 1; ownerId <= state.roomSize; ownerId++) {
@@ -825,37 +867,36 @@
       notify('Auction started for everyone in the room.');
     }
 
-    function joinExistingRoom(codeValue) {
+    async function joinExistingRoom(codeValue) {
       const codeInput = normalizeRoomCode(codeValue || document.getElementById('input-room-code').value);
       if (!codeInput) return;
+      let parsed = null;
+      let ownerId = null;
       try {
-        const saved = localStorage.getItem('fc25_room_' + codeInput);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          state.roomActive = true;
-          state.roomCode = parsed.roomCode;
-          state.roomMode = parsed.roomMode || 'auction';
-          state.roomSize = parsed.roomSize;
-          state.hostOwnerId = parsed.hostOwnerId || 1;
-          state.players = parsed.players.filter(p => !REMOVED_PLAYER_IDS.has(p.id));
-          state.currentIndex = parsed.currentIndex;
-          state.currentBid = parsed.currentBid;
-          state.currentBidder = parsed.currentBidder;
-          state.passRequest = parsed.passRequest || null;
-          state.timerSeconds = parsed.timerSeconds ?? 10;
-          state.timerRunning = Boolean(parsed.timerRunning);
-          state.timerPaused = Boolean(parsed.timerPaused);
-          state.timerStartedAt = parsed.timerStartedAt || 0;
-          state.timerPausedAt = parsed.timerPausedAt || 0;
-          state.timerPausedMs = parsed.timerPausedMs || 0;
-          state.auctionStarted = Boolean(parsed.auctionStarted);
-          state.auctionComplete = Boolean(parsed.auctionComplete);
-          state.owners = parsed.owners;
-          state.localOwnerId = claimRoomSlot(state.roomCode, state.roomSize);
+        const response = await fetch('/api/rooms/' + encodeURIComponent(codeInput) + '/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          parsed = data.snapshot;
+          ownerId = data.ownerId;
+          state.serverMemberCount = Number(data.memberCount) || 0;
+        }
+      } catch (e) {}
+
+      // Keep same-device rooms working if the backend is unavailable.
+      if (!parsed) {
+        try {
+          const saved = localStorage.getItem('fc25_room_' + codeInput);
+          if (saved) parsed = JSON.parse(saved);
+        } catch (e) {}
+      }
+
+      if (parsed && applyRoomSnapshot(parsed, ownerId)) {
+          if (!ownerId) state.localOwnerId = claimRoomSlot(state.roomCode, state.roomSize);
           state.explicitRoomExit = false;
           state.gameEnded = false;
-          state.bracket = parsed.bracket || { qf: [], sf: [], finalMatch: null, champion: null };
-          state.lineupBuilder = parsed.lineupBuilder || state.lineupBuilder;
           document.getElementById('room-code-display').textContent = 'ROOM: ' + state.roomCode;
           document.getElementById('created-room-id').textContent = state.roomCode;
           document.getElementById('lobby-room-id').textContent = state.roomCode;
@@ -864,7 +905,7 @@
           hideJoinRoom();
           preloadUpcomingPhotos(state.currentIndex, 15);
           setupBroadcastChannel();
-          renderAll();
+          startRoomServerPolling();
           let savedView = null;
           try { savedView = sessionStorage.getItem('fc25_active_view'); } catch (e) {}
           const restoredView = savedView === 'tournament' && state.auctionComplete ? 'tournament'
@@ -874,8 +915,7 @@
           switchView(state.roomMode === 'lineup' && state.auctionStarted ? 'lineup' : restoredView);
           notify('Synced with Room ' + state.roomCode);
           return;
-        }
-      } catch (e) {}
+      }
       notify('Room not found. Check the code and try again.');
     }
 

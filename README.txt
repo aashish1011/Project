@@ -23,9 +23,9 @@ players, formation presets, editable slots, position filtering, and player searc
 Security notes:
 - The admin panel uses a server-side Flask session, a hashed password, CSRF token,
   secure cookie flags, login throttling, and basic security headers.
-- The current multiplayer game is a browser prototype: room state is stored in
-  localStorage and synchronized with BroadcastChannel, so it is not suitable for
-  trusted server-side game rules until a real room store is added.
+- Multiplayer room state is synchronized through the Flask room API so separate
+  devices can join the same room. The current API store is process-local; use a
+  shared Redis or database store before deploying multiple server workers.
 
 Key Updates:
 - Top 80 Official EA Sports FC 25 Players (ratings 91 down to 85).

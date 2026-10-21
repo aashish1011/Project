@@ -11,6 +11,7 @@ import os
 import time
 import hmac
 import secrets
+from threading import Lock
 from functools import wraps
 from pathlib import Path
 
@@ -49,6 +50,13 @@ app.config.update(
 LOGIN_WINDOW_SECONDS = 15 * 60
 LOGIN_MAX_ATTEMPTS = 5
 login_attempts: dict[str, list[float]] = {}
+
+# Shared room state for the running Flask instance. This lets separate phones
+# use the same room instead of relying on browser-local storage. A production
+# deployment with multiple workers should move this store to Redis or a DB.
+ROOM_TTL_SECONDS = 24 * 60 * 60
+room_store: dict[str, dict] = {}
+room_store_lock = Lock()
 
 
 def admin_required(view):
@@ -93,6 +101,74 @@ def home():
 @app.get("/health")
 def health():
     return jsonify({"status": "ok", "service": "build-and-win"})
+
+
+def normalize_room_code(value: str) -> str:
+    return str(value or "").strip().upper()
+
+
+def prune_rooms() -> None:
+    cutoff = time.time() - ROOM_TTL_SECONDS
+    stale = [code for code, room in room_store.items() if room.get("updated_at", 0) < cutoff]
+    for code in stale:
+        room_store.pop(code, None)
+
+
+@app.post("/api/rooms")
+def create_room_api():
+    payload = request.get_json(silent=True) or {}
+    code = normalize_room_code(payload.get("roomCode"))
+    if not code or len(code) > 32:
+        return jsonify({"error": "Invalid room code"}), 400
+    with room_store_lock:
+        prune_rooms()
+        room_store[code] = {"snapshot": payload, "members": {1}, "updated_at": time.time()}
+    return jsonify({"snapshot": payload, "ownerId": 1, "memberCount": 1})
+
+
+@app.post("/api/rooms/<code>/join")
+def join_room_api(code: str):
+    code = normalize_room_code(code)
+    with room_store_lock:
+        prune_rooms()
+        room = room_store.get(code)
+        if not room:
+            return jsonify({"error": "Room not found"}), 404
+        available = [slot for slot in range(1, int(room["snapshot"].get("roomSize", 2)) + 1) if slot not in room["members"]]
+        if not available:
+            return jsonify({"error": "Room is full"}), 409
+        owner_id = available[0]
+        room["members"].add(owner_id)
+        room["updated_at"] = time.time()
+        return jsonify({"snapshot": room["snapshot"], "ownerId": owner_id, "memberCount": len(room["members"])})
+
+
+@app.get("/api/rooms/<code>")
+def get_room_api(code: str):
+    code = normalize_room_code(code)
+    with room_store_lock:
+        prune_rooms()
+        room = room_store.get(code)
+        if not room:
+            return jsonify({"error": "Room not found"}), 404
+        room["updated_at"] = time.time()
+        return jsonify({"snapshot": room["snapshot"], "memberCount": len(room["members"])})
+
+
+@app.put("/api/rooms/<code>")
+def update_room_api(code: str):
+    code = normalize_room_code(code)
+    payload = request.get_json(silent=True) or {}
+    if normalize_room_code(payload.get("roomCode")) != code:
+        return jsonify({"error": "Room code mismatch"}), 400
+    with room_store_lock:
+        prune_rooms()
+        room = room_store.get(code)
+        if not room:
+            return jsonify({"error": "Room not found"}), 404
+        room["snapshot"] = payload
+        room["updated_at"] = time.time()
+    return jsonify({"snapshot": payload, "memberCount": len(room["members"])})
 
 
 @app.route("/admin", methods=["GET", "POST"])
