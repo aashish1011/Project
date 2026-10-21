@@ -63,14 +63,14 @@
     .landing-player-card:hover { transform: translateY(-6px); border-color: #d0b986; box-shadow: 0 18px 30px rgba(0,0,0,.3); }
     .landing-player-card img { width: 100%; height: 160px; object-fit: contain; object-position: center; padding: 8px; background: #24221d; transition: transform .3s ease, filter .3s ease; }
     .landing-player-card:hover img { transform: scale(1.05); filter: brightness(1.08) saturate(1.05); }
-    .fifa-grid-card { background: #c59b27; color: #1c1504; border: 2px solid #f1dfaa; border-radius: 12px; overflow: hidden; box-shadow: 0 14px 28px rgba(0,0,0,.2); transition: transform .18s ease, box-shadow .18s ease; }
+    .fifa-grid-card { width: 100%; min-width: 0; background: #c59b27; color: #1c1504; border: 2px solid #f1dfaa; border-radius: 12px; overflow: hidden; box-shadow: 0 14px 28px rgba(0,0,0,.2); transition: transform .18s ease, box-shadow .18s ease; }
     .fifa-grid-card:hover { transform: translateY(-4px); box-shadow: 0 20px 34px rgba(0,0,0,.3); }
     .database-grid-card { transition: transform .45s ease, opacity .3s ease; }
     .database-grid-card-enter { animation: database-card-enter .55s ease both; }
     .database-grid-fading .database-grid-card:first-child { opacity: 0; transform: translateX(-28px); }
     @keyframes database-card-enter { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
-    .fifa-grid-photo { height: 220px; background: #9b7b22; position: relative; overflow: hidden; }
-    .fifa-grid-photo img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .fifa-grid-photo { height: clamp(180px, 28vw, 220px); background: #9b7b22; position: relative; overflow: hidden; }
+    .fifa-grid-photo img { width: 100%; height: 100%; object-fit: contain; object-position: center; padding: 8px 12px; box-sizing: border-box; }
     .bid-console { background: linear-gradient(145deg, #171b22, #0f1217); border: 1px solid #303949; border-radius: 14px; box-shadow: 0 12px 24px rgba(0,0,0,.18); }
     .bid-console.leading { box-shadow: 0 0 0 1px rgba(245,158,11,.35), 0 16px 30px rgba(0,0,0,.24); }
     .bid-primary { background: #d19b2a; color: #1d1607; min-height: 48px; font-size: 14px; font-weight: 900; border-radius: 9px; transition: transform .16s ease, filter .16s ease, box-shadow .16s ease; box-shadow: 0 8px 18px rgba(209,155,42,.18); }
@@ -92,6 +92,12 @@
 .lineup-builder-slot { min-height: 68px; }
 .lineup-builder-slot[draggable="true"] { cursor: grab; touch-action: none; user-select: none; }
 .lineup-builder-slot[draggable="true"]:active { cursor: grabbing; }
+    #landing-featured-grid, #db-grid { min-width: 0; }
+
+    @media (max-width: 640px) {
+      .fifa-grid-photo { height: clamp(180px, 62vw, 240px); }
+      .fifa-grid-photo img { padding: 6px 18px; }
+    }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0b0d10; }
     ::-webkit-scrollbar-thumb { background: #2e3545; border-radius: 2px; }
