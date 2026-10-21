@@ -95,8 +95,12 @@
     #landing-featured-grid, #db-grid { min-width: 0; }
 
     @media (max-width: 640px) {
-      .fifa-grid-photo { height: clamp(180px, 62vw, 240px); }
-      .fifa-grid-photo img { padding: 6px 18px; }
+      .fifa-grid-photo { height: clamp(110px, 34vw, 150px); }
+      .fifa-grid-photo img { padding: 4px 6px; }
+      .fifa-grid-card > .p-3 { padding: .55rem; }
+      .fifa-grid-card .text-base { font-size: .75rem; line-height: 1.1; }
+      .fifa-grid-card .grid { gap: .15rem; font-size: 8px; }
+      .fifa-grid-card .mt-3 { margin-top: .5rem; }
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0b0d10; }
